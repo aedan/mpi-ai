@@ -3,7 +3,9 @@ set -euo pipefail
 
 echo "=== 03 — Provision CephFS Storage ==="
 
-cat <<'EOF' | kubectl apply -f -
+CEPHFS_SECRET=$(kubectl get secret -n rook-ceph -o jsonpath='{.items[*].metadata.name}' 2>/dev/null | tr ' ' '\n' | grep cephfs-provisioner | head -1)
+
+cat <<EOF | kubectl apply -f -
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
@@ -12,14 +14,26 @@ provisioner: cephfs.csi.ceph.com
 parameters:
   fsName: mpi-ai
   monitors: 172.20.0.60:6789,172.20.0.57:6789,172.20.0.51:6789
-secretRef:
-  name: cephfs-secret
-  namespace: mpi-inference
+  secretName: cephfs-secret
+  secretNamespace: mpi-inference
 EOF
 
-CEPHFS_USER=$(kubectl get secret -n rook-ceph -l "rook.io/cephfs-csi-cephfs.com=csi-cephfs" \
-  --no-headers -o custom-columns=NAME:metadata.name -o jsonpath='{.items[0].metadata.name}' \
-  2>/dev/null || echo "rook-csi-cephfs-provisioner")
+kubectl create namespace mpi-inference 2>/dev/null || true
+
+cat <<EOF > /tmp/cephfs-secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cephfs-secret
+  namespace: mpi-inference
+type: kubernetes.io/opaque
+data:
+  username: $(kubectl get secret "$CEPHFS_SECRET" -n rook-ceph -o jsonpath='{.data.username}' | base64 -d | base64 -w 0)
+  key: $(kubectl get secret "$CEPHFS_SECRET" -n rook-ceph -o jsonpath='{.data.key}' | base64 -d | base64 -w 0)
+EOF
+
+kubectl apply -f /tmp/cephfs-secret.yaml
+echo "StorageClass and secret created."
 
 cat <<EOF > /tmp/cephfs-secret.yaml
 apiVersion: v1
