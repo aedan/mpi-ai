@@ -1,0 +1,36 @@
+apiVersion: mpioperator.xinli.com.cn/v1alpha1
+kind: MPIJob
+metadata:
+  name: kimi-k2-inference
+  namespace: mpi-inference
+spec:
+  runPolicy:
+    cleanPodPolicy: None
+  mpiReplicaSpecs:
+    Worker:
+      replicas: 63
+      template:
+        spec:
+          nodeSelector:
+            mpi-ai: "true"
+          containers:
+            - name: mpi-worker
+              image: ghcr.io/aedan/mpi-ai-inference:latest
+              imagePullPolicy: IfNotPresent
+              ports:
+                - containerPort: 8080
+                  name: http
+              env:
+                - name: MODEL_DIR
+                  value: /models/kimi-k2-instruct-int4
+                - name: NUM_WORKERS
+                  value: "63"
+                - name: INFERENCE_PORT
+                  value: "8080"
+              volumeMounts:
+                - name: model-volume
+                  mountPath: /models
+          volumes:
+            - name: model-volume
+              persistentVolumeClaim:
+                claimName: kimi-k2-model-pvc

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kimi-k2-inference
+  namespace: mpi-inference
+  labels:
+    mpi-ai/project: mpi-inference
+spec:
+  type: ClusterIP
+  selector:
+    mpioperator.xinli.com.cn/mpijob: kimi-k2-inference
+    mpioperator.xinli.com.cn/mpiReplicaRole: Worker
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+      protocol: TCP
