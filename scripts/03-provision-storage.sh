@@ -34,18 +34,3 @@ EOF
 
 kubectl apply -f /tmp/cephfs-secret.yaml
 echo "StorageClass and secret created."
-
-cat <<EOF > /tmp/cephfs-secret.yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: cephfs-secret
-  namespace: mpi-inference
-type: kubernetes.io/opaque
-data:
-  username: $(kubectl get secret "$CEPHFS_USER" -n rook-ceph -o jsonpath='{.data.username}' | base64 -d)
-  key: $(kubectl get secret "$CEPHFS_USER" -n rook-ceph -o jsonpath='{.data.key}' | base64 -d)
-EOF
-
-kubectl apply -f /tmp/cephfs-secret.yaml
-echo "StorageClass and secret created."
